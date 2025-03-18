@@ -1,0 +1,64 @@
+steps:
+  # Authenticate with GCP using a pre-configured service account
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud auth activate-service-account --key-file=/workspace/gcp-key.json &&
+        gcloud auth configure-docker us-central1-docker.pkg.dev
+
+  # Build and Push Docker Image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/upgradlabs-1738334790345/amit23comp/gke-webpage:latest'
+      - '.'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/upgradlabs-1738334790345/amit23comp/gke-webpage:latest'
+
+  # Get GKE credentials
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'gcloud'
+      - 'container'
+      - 'clusters'
+      - 'get-credentials'
+      - 'autopilot-cluster-1'
+      - '--region'
+      - 'us-central1'
+      - '--project'
+      - 'upgradlabs-1738334790345'
+
+  # Deploy application to GKE
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'kubectl'
+      - 'apply'
+      - '-f'
+      - 'k8s/deployment.yaml'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'kubectl'
+      - 'apply'
+      - '-f'
+      - 'k8s/service.yaml'
+
+  # Verify deployment
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'kubectl'
+      - 'get'
+      - 'services'
+      - '-o'
+      - 'wide'
+
+images:
+  - 'us-central1-docker.pkg.dev/upgradlabs-1738334790345/amit23comp/gke-webpage:latest'
+
+
