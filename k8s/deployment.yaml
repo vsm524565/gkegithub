@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gke-webpage
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gke-webpage
+  template:
+    metadata:
+      labels:
+        app: gke-webpage
+    spec:
+      containers:
+        - name: gke-webpage
+          image: us-central1-docker.pkg.dev/upgradlabs-1738334790345/amit23comp/gke-webpage:latest
+          ports:
+            - containerPort: 80
+
