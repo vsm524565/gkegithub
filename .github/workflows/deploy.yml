@@ -1,6 +1,49 @@
-- name: Authenticate with GCP
-  run: |
-    echo "$GCP_SA_KEY" | base64 --decode > gcp-key.json
-    gcloud auth activate-service-account --key-file=gcp-key.json
-  env:
-    GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+name: Deploy to GKE Autopilot
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Authenticate with GCP
+        run: |
+          echo "$GCP_SA_KEY" | base64 --decode > gcp-key.json
+          gcloud auth activate-service-account --key-file=gcp-key.json
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: upgradlabs-1738334790345
+
+      - name: Configure Docker authentication
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_NAME=us-central1-docker.pkg.dev/upgradlabs-1738334790345/amit23comp/gke-webpage:latest
+          docker build -t $IMAGE_NAME .
+          docker push $IMAGE_NAME
+
+      - name: Get GKE Credentials
+        run: |
+          gcloud container clusters get-credentials autopilot-cluster-1 \
+            --region us-central1 \
+            --project upgradlabs-1738334790345
+
+      - name: Deploy to GKE
+        run: |
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+
+      - name: Verify Deployment
+        run: kubectl get services -o wide
