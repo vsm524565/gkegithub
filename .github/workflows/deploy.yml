@@ -11,14 +11,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
-      - name: Authenticate with GCP
+      - name: Authenticate with GCP using environment variable
         run: |
-          echo '${{ secrets.GCP_SA_KEY }}' > gcp-key.json
-          cat gcp-key.json  
-          gcloud auth activate-service-account --key-file=gcp-key.json
-          gcloud auth list
+          gcloud auth activate-service-account \
+            --key-file=<(echo "$GCP_SA_KEY")
         env:
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 
@@ -28,17 +26,13 @@ jobs:
           project_id: upgradlabs-1738334790345
 
       - name: Configure Docker authentication
-        run: |
-          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev
 
       - name: Build and Push Docker Image
         run: |
-          IMAGE_NAME=us-central1-docker.pkg.dev/upgradlabs-1738334790345/amit23comp/gke-webpage
-          TAG=$(echo $GITHUB_SHA | cut -c1-7)  # Short Git SHA for versioning
-          docker build -t $IMAGE_NAME:$TAG .
-          docker push $IMAGE_NAME:$TAG
-          docker tag $IMAGE_NAME:$TAG $IMAGE_NAME:latest
-          docker push $IMAGE_NAME:latest
+          IMAGE_NAME=us-central1-docker.pkg.dev/upgradlabs-1738334790345/amit23comp/gke-webpage:latest
+          docker build -t $IMAGE_NAME .
+          docker push $IMAGE_NAME
 
       - name: Get GKE Credentials
         run: |
@@ -50,7 +44,6 @@ jobs:
         run: |
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/service.yaml
-          kubectl rollout status deployment/gke-webpage -n default  # Wait for deployment
 
       - name: Verify Deployment
         run: kubectl get services -o wide
