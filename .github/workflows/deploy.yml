@@ -1,0 +1,42 @@
+name: Deploy to GKE Autopilot
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Authenticate with GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_NAME=us-central1-docker.pkg.dev/upgradlabs-1738334790345/amit23comp/gke-webpage:latest
+          docker build -t $IMAGE_NAME:latest .
+          docker push $IMAGE_NAME:latest
+
+      - name: Get GKE Credentials
+        run: |
+          gcloud container clusters get-credentials autopilot-cluster-1 \
+            --region us-central1 \
+            --project upgradlabs-1738334790345
+
+      - name: Deploy to GKE
+        run: |
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+
+      - name: Verify Deployment
+        run: kubectl get services -o wide
+
