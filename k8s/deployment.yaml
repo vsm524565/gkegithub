@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: gke-webpage
-          image: us-central1-docker.pkg.dev/upgradlabs-1738334790345/amit23comp/gke-webpage:latest
+          image: us-east1-docker.pkg.dev/upgradlabs-1740997931739/vivekarfirst/gke-webpage:latest
           ports:
             - containerPort: 80
 
